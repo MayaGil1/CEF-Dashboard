@@ -1,0 +1,32 @@
+# UI and app framework
+streamlit~=1.35
+
+# Web and API
+requests>=2.31.0
+feedparser
+urllib3
+python-dotenv
+schedule
+fake-useragent
+
+# Data handling
+pandas>=1.5.0
+numpy
+sqlite3
+pathlib
+
+# ML & NLP (if still used)
+transformers
+torch
+spacy
+scikit-learn
+
+# HTML parsing
+beautifulsoup4
+lxml
+
+# Visualization
+plotly>=5.15.0
+
+# Additional dependencies for discount analysis
+python-dateutil
