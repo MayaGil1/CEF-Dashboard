@@ -51,7 +51,7 @@ else:
                 return None
         return _fetcher
 
-
+    
     @st.cache_data(show_spinner=True, ttl=3600)  # Cache for 1 hour
     def _get_filings(days_back: int, use_cache: bool = True):
         """Fetch SEC filings with caching"""
@@ -208,21 +208,13 @@ else:
             df_tickers = set(df['ticker'].unique()) if 'ticker' in df.columns else set()
             non_cef_tickers = df_tickers - expected_cef_tickers
             
-            if non_cef_tickers:
-                st.error(f"❌ Found non-CEF tickers: {', '.join(non_cef_tickers)}")
-                st.error("This indicates a ticker mapping problem. Please clear the database and force fetch.")
-                
-                # Show what we expected vs what we got
-                st.write("**Expected CEF tickers:**", ', '.join(sorted(expected_cef_tickers)))
-                st.write("**Found tickers:**", ', '.join(sorted(df_tickers)))
+
         # Verify we have CEF data, not JPM/non-CEF data
         cef_tickers = set(fetcher.ticker_map.keys()) if fetcher else set()
         df_tickers = set(df['ticker'].unique()) if 'ticker' in df.columns else set()
         non_cef_tickers = df_tickers - cef_tickers
         
-        if non_cef_tickers:
-            st.warning(f"⚠️ Found non-CEF tickers in results: {', '.join(non_cef_tickers)}")
-            st.info("This suggests the fetcher may not be using the correct ticker mapping.")
+
 
         # Summary metrics
         col1, col2, col3 = st.columns(3)
@@ -287,7 +279,7 @@ else:
         # Define visible columns - only include columns that exist
         ALL_VISIBLE_COLS = [
             "filing_date", "ticker", "fund_name", "filing_type", 
-            "filer_name", "ownership_percent", "url"
+            "filer_name", "url"
         ]
         
         VISIBLE_COLS = [col for col in ALL_VISIBLE_COLS if col in filtered_df.columns]
@@ -314,12 +306,6 @@ else:
             column_config["filing_type"] = st.column_config.TextColumn("Type", width="small")
         if 'filer_name' in VISIBLE_COLS:
             column_config["filer_name"] = st.column_config.TextColumn("Filer", width="large")
-        if 'ownership_percent' in VISIBLE_COLS:
-            column_config["ownership_percent"] = st.column_config.NumberColumn(
-                "Ownership %",
-                format="%.2f%%",
-                width="small"
-            )
         if 'url' in VISIBLE_COLS:
             column_config["url"] = st.column_config.LinkColumn("SEC Filing", width="small")
         

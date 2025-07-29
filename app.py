@@ -3,6 +3,8 @@ import sys
 import os
 from pathlib import Path
 
+
+
 # Add panels to path
 current_dir = Path(__file__).parent
 panels_dir = current_dir / "panels"
@@ -39,8 +41,6 @@ def main():
                 "📰 News & Announcements",
                 "📋 SEC Filings Monitor",
                 "💰 Discount Analysis",
-                "📈 Performance Tracking",
-                "📊 Portfolio Overview"
             ]
         )
     
@@ -50,11 +50,7 @@ def main():
     elif panel_choice == "📋 SEC Filings Monitor":
         sec_filings.render()
     elif panel_choice == "💰 Discount Analysis":
-        discounts.render()  # Now fully implemented
-    elif panel_choice == "📈 Performance Tracking":
-        st.info("Performance Tracking panel - Coming Soon")
-    elif panel_choice == "📊 Portfolio Overview":
-        st.info("Portfolio Overview panel - Coming Soon")
+        discounts.render()
 
 if __name__ == "__main__":
     main()

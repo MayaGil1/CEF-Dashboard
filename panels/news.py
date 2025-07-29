@@ -28,6 +28,23 @@ except ImportError as e:
 else:
     # Initialize fetcher with error handling
     _fetcher = None
+    def init_session_state():
+        """Initialize session state for hidden rows"""
+        if "hidden_news_rows" not in st.session_state:
+            st.session_state.hidden_news_rows = set()
+
+    def hide_news_row(row_index):
+        """Function to hide a news row"""
+        st.session_state.hidden_news_rows.add(row_index)
+
+    def show_hidden_rows_count():
+        """Display count of hidden rows"""
+        if st.session_state.hidden_news_rows:
+            st.info(f"🙈 Hidden items: {len(st.session_state.hidden_news_rows)}")
+
+    def reset_hidden_rows():
+        """Reset all hidden rows"""
+        st.session_state.hidden_news_rows.clear()
 
     def get_fetcher():
         global _fetcher
@@ -57,6 +74,7 @@ else:
             return pd.DataFrame()
 
     def render():
+        init_session_state()  
         st.header("📰 CEF News & Announcements")
         st.caption("Source blend: NewsAPI, Marketaux, Alpha Vantage, finance RSS")
 
@@ -147,29 +165,107 @@ else:
             st.info("No articles match your filter criteria")
             return
 
+        # Filter out hidden rows
+        visible_df = filtered_df[~filtered_df.index.isin(st.session_state.hidden_news_rows)]
+
+        # Control buttons for hidden functionality
+        col1, col2, col3 = st.columns([2, 1, 1])
+        with col1:
+            show_hidden_rows_count()
+        with col2:
+            if st.button("🔄 Reset Hidden", help="Show all hidden rows again"):
+                reset_hidden_rows()
+                st.rerun()
+        with col3:
+            st.metric("Visible Articles", len(visible_df))
+
+        st.markdown("---")
+
+        # Check if all articles are hidden
+        if len(visible_df) == 0:
+            st.warning("All articles are hidden. Click '🔄 Reset Hidden' to show them again.")
+            return
+
         # Sort by priority if available
-        if 'priority_score' in filtered_df.columns:
-            filtered_df = filtered_df.sort_values("priority_score", ascending=False)
+        if 'priority_score' in visible_df.columns:
+            visible_df = visible_df.sort_values("priority_score", ascending=False)
+
 
         VISIBLE_COLS = [
             "title", "category", "published_at", "tickers", "url", "source","fund_names", "activists"
         ]
         existing_cols = [col for col in VISIBLE_COLS if col in filtered_df.columns]
         display_df = filtered_df[existing_cols].copy()
-        # Display results
-        st.dataframe(
-            filtered_df.reset_index(drop=True),
-            height=600,
-            use_container_width=True,
-            column_config={
-                "url": st.column_config.LinkColumn("Article"),
-                "published_at": st.column_config.DatetimeColumn("Published"),
-                "tickers": st.column_config.ListColumn("Tickers"),
-                "fund_names": st.column_config.ListColumn("Funds"),
-                "activists": st.column_config.ListColumn("Activists"),
-                "category": st.column_config.TextColumn("Category"),
-                "source": st.column_config.TextColumn("Source"),
-                "title": st.column_config.TextColumn("Title", width="large"),
-            },
-            column_order=existing_cols,
-        )
+        # Display articles in table format with integrated hide buttons
+        st.subheader(f"📰 News Articles ({len(visible_df)} visible)")
+
+        # Create table headers
+        header_cols = st.columns([5, 1.2, 1.5, 1.8, 1.2, 0.8])
+        with header_cols[0]:
+            st.markdown("**📰 Title**")
+        with header_cols[1]:
+            st.markdown("**📁 Category**")
+        with header_cols[2]:
+            st.markdown("**📅 Published**")
+        with header_cols[3]:
+            st.markdown("**🏷️ Tickers**")
+        with header_cols[4]:
+            st.markdown("**🔗 Source**")
+        with header_cols[5]:
+            st.markdown("**Action**")
+
+        st.markdown("---")
+
+        # Display each article as a table row
+        for idx, row in visible_df.iterrows():
+            cols = st.columns([5, 1.2, 1.5, 1.8, 1.2, 0.8])
+            
+            with cols[0]:
+                title = row.get('title', 'No Title')
+                if 'url' in row and pd.notna(row['url']):
+                    st.markdown(f"[{title}]({row['url']})")
+                else:
+                    st.write(title)
+                
+                # Show additional info in smaller text below title
+                additional_info = []
+                if 'fund_names' in row and row['fund_names']:
+                    fund_names = ', '.join(row['fund_names']) if isinstance(row['fund_names'], list) else str(row['fund_names'])
+                    additional_info.append(f"🏢 {fund_names}")
+                if 'activist_mentions' in row and row['activist_mentions']:
+                    activists = ', '.join(row['activist_mentions']) if isinstance(row['activist_mentions'], list) else str(row['activist_mentions'])
+                    additional_info.append(f"⚡ {activists}")
+                
+                if additional_info:
+                    st.caption(" • ".join(additional_info))
+            
+            with cols[1]:
+                st.write(row.get('category', 'N/A'))
+            
+            with cols[2]:
+                pub_date = str(row.get('published_at', 'N/A'))
+                # Format date nicely
+                if pub_date != 'N/A' and len(pub_date) > 10:
+                    st.write(pub_date[:10])
+                else:
+                    st.write(pub_date)
+            
+            with cols[3]:
+                if 'tickers' in row and row['tickers']:
+                    tickers_display = ', '.join(row['tickers']) if isinstance(row['tickers'], list) else str(row['tickers'])
+                    st.write(tickers_display)
+                else:
+                    st.write('N/A')
+            
+            with cols[4]:
+                st.write(row.get('source', 'N/A'))
+            
+            with cols[5]:
+                if st.button("❌", key=f"hide_table_{idx}", help="Hide this article"):
+                    hide_news_row(idx)
+                    st.rerun()
+            
+            # Add subtle divider between rows
+            st.markdown('<hr style="margin: 5px 0; opacity: 0.3;">', unsafe_allow_html=True)
+
+        
